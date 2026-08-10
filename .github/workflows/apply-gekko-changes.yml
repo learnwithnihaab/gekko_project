@@ -3,6 +3,10 @@ name: Apply Gekko project files
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   add-files:
     runs-on: ubuntu-latest
