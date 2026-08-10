@@ -6,24 +6,28 @@ on:
 jobs:
   add-files:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Create project files and commit to new branch
         run: |
           set -euo pipefail
-          BRANCH=feature/complete-project-3
 
-          # Configure git user for the commit
+          BRANCH="feature/complete-project-3"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Create and switch to branch
-          if git show-ref --quiet refs/heads/$BRANCH; then
-            git switch $BRANCH
+          # Create or switch to branch
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$BRANCH:$BRANCH"
+            git switch "$BRANCH"
           else
-            git switch -c $BRANCH
+            git switch -c "$BRANCH"
           fi
 
           # Create directories
@@ -36,247 +40,324 @@ jobs:
 
           # README
           cat > README.md <<'EOF'
-# Gekko Project - Starter implementation
+          # Gekko Project - Starter Implementation
 
-This branch adds a starter Spring Boot backend skeleton for the Gekko subscription management project.
+          This branch adds a starter Spring Boot backend skeleton for the Gekko subscription management project.
 
-What's included (summary):
-- Java 11 + Spring Boot starter project (pom.xml)
-- Basic controllers and services (examples)
-- application.yml (development defaults)
-- Flyway V1 migration to create a basic table
-- docker-compose.yml (postgres, zookeeper, kafka, redis)
-- CI workflow (.github/workflows/ci.yml)
-- This apply workflow (creates branch + PR)
+          ## What's Included
 
-How to use:
-1. Start local infra:
-   docker-compose up -d
-2. Build and run:
-   mvn clean package
-   java -jar target/gekko-service-0.0.1-SNAPSHOT.jar
-3. Endpoints:
-   - GET /api/v1/health (sample)
-   - See src/ for sample controllers.
+          - Java 11 + Spring Boot starter project
+          - Basic controller and service structure
+          - application.yml
+          - Flyway V1 migration
+          - Docker Compose with PostgreSQL, Zookeeper, Kafka and Redis
+          - CI workflow
+          - GitHub Actions workflow
 
-Notes:
-- This is a starter skeleton: replace the stubbed/simplified classes with production implementations,
-  add real PDAPI/BRIM clients, secure secrets and update JWT/OAuth config as needed.
-EOF
+          ## How to Use
 
-          # pom.xml (minimal)
+          Start local infrastructure:
+
+              docker compose up -d
+
+          Build the application:
+
+              mvn clean package
+
+          Run the application:
+
+              java -jar target/gekko-service-0.0.1-SNAPSHOT.jar
+
+          ## Endpoints
+
+          - GET /api/v1/health
+
+          ## Notes
+
+          This is currently a starter skeleton. Production implementations
+          for PDAPI, BRIM, authentication, authorization, error handling,
+          business logic and external integrations still need to be added.
+          EOF
+
+          # pom.xml
           cat > pom.xml <<'EOF'
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.gekko</groupId>
-  <artifactId>gekko-service</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <packaging>jar</packaging>
+          <?xml version="1.0" encoding="UTF-8"?>
+          <project xmlns="http://maven.apache.org/POM/4.0.0"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  <properties>
-    <java.version>11</java.version>
-    <spring.boot.version>2.7.12</spring.boot.version>
-    <lombok.version>1.18.28</lombok.version>
-  </properties>
+              <modelVersion>4.0.0</modelVersion>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.flywaydb</groupId>
-      <artifactId>flyway-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>${lombok.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+              <parent>
+                  <groupId>org.springframework.boot</groupId>
+                  <artifactId>spring-boot-starter-parent</artifactId>
+                  <version>2.7.18</version>
+                  <relativePath/>
+              </parent>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
-</project>
-EOF
+              <groupId>com.gekko</groupId>
+              <artifactId>gekko-service</artifactId>
+              <version>0.0.1-SNAPSHOT</version>
+              <packaging>jar</packaging>
 
-          # application.yml (development config)
+              <name>gekko-service</name>
+              <description>Gekko Subscription Management Service</description>
+
+              <properties>
+                  <java.version>11</java.version>
+              </properties>
+
+              <dependencies>
+
+                  <dependency>
+                      <groupId>org.springframework.boot</groupId>
+                      <artifactId>spring-boot-starter-web</artifactId>
+                  </dependency>
+
+                  <dependency>
+                      <groupId>org.springframework.boot</groupId>
+                      <artifactId>spring-boot-starter-security</artifactId>
+                  </dependency>
+
+                  <dependency>
+                      <groupId>org.springframework.boot</groupId>
+                      <artifactId>spring-boot-starter-data-jpa</artifactId>
+                  </dependency>
+
+                  <dependency>
+                      <groupId>org.postgresql</groupId>
+                      <artifactId>postgresql</artifactId>
+                      <scope>runtime</scope>
+                  </dependency>
+
+                  <dependency>
+                      <groupId>org.flywaydb</groupId>
+                      <artifactId>flyway-core</artifactId>
+                  </dependency>
+
+                  <dependency>
+                      <groupId>org.springframework.boot</groupId>
+                      <artifactId>spring-boot-starter-test</artifactId>
+                      <scope>test</scope>
+                  </dependency>
+
+              </dependencies>
+
+              <build>
+                  <plugins>
+                      <plugin>
+                          <groupId>org.springframework.boot</groupId>
+                          <artifactId>spring-boot-maven-plugin</artifactId>
+                      </plugin>
+                  </plugins>
+              </build>
+
+          </project>
+          EOF
+
+          # application.yml
           cat > src/main/resources/application.yml <<'EOF'
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/gekko
-    username: postgres
-    password: password
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: true
-app:
-  jwt:
-    secret: ChangeMe
-EOF
+          spring:
+            datasource:
+              url: jdbc:postgresql://localhost:5432/gekko
+              username: postgres
+              password: password
+
+            jpa:
+              hibernate:
+                ddl-auto: validate
+              show-sql: true
+
+            flyway:
+              enabled: true
+
+          server:
+            port: 8080
+
+          app:
+            jwt:
+              secret: ChangeMe
+          EOF
 
           # docker-compose.yml
           cat > docker-compose.yml <<'EOF'
-version: '3.8'
-services:
-  postgres:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: gekko
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports:
-      - 5432:5432
+          services:
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.1
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+            postgres:
+              image: postgres:13
+              container_name: gekko-postgres
+              environment:
+                POSTGRES_DB: gekko
+                POSTGRES_USER: postgres
+                POSTGRES_PASSWORD: password
+              ports:
+                - "5432:5432"
+              volumes:
+                - postgres-data:/var/lib/postgresql/data
 
-  kafka:
-    image: confluentinc/cp-kafka:7.0.1
-    depends_on:
-      - zookeeper
-    ports:
-      - 9092:9092
-EOF
+            zookeeper:
+              image: confluentinc/cp-zookeeper:7.0.1
+              container_name: gekko-zookeeper
+              environment:
+                ZOOKEEPER_CLIENT_PORT: 2181
+                ZOOKEEPER_TICK_TIME: 2000
+              ports:
+                - "2181:2181"
+
+            kafka:
+              image: confluentinc/cp-kafka:7.0.1
+              container_name: gekko-kafka
+              depends_on:
+                - zookeeper
+              ports:
+                - "9092:9092"
+              environment:
+                KAFKA_BROKER_ID: 1
+                KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+                KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+                KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+            redis:
+              image: redis:7
+              container_name: gekko-redis
+              ports:
+                - "6379:6379"
+
+          volumes:
+            postgres-data:
+          EOF
 
           # Flyway V1 migration
           cat > src/main/resources/db/migration/V1__init.sql <<'EOF'
-CREATE TABLE customers (
-  id bigserial PRIMARY KEY,
-  name varchar(255) NOT NULL,
-  email varchar(255) UNIQUE
-);
-EOF
+          CREATE TABLE customers (
+              id BIGSERIAL PRIMARY KEY,
+              name VARCHAR(255) NOT NULL,
+              email VARCHAR(255) UNIQUE
+          );
+          EOF
 
-          # Minimal Spring Boot application
+          # Main Spring Boot application
           cat > src/main/java/com/gekko/GekkoApplication.java <<'EOF'
-package com.gekko;
+          package com.gekko;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+          import org.springframework.boot.SpringApplication;
+          import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
-public class GekkoApplication {
-  public static void main(String[] args) {
-    SpringApplication.run(GekkoApplication.class, args);
-  }
-}
-EOF
+          @SpringBootApplication
+          public class GekkoApplication {
+
+              public static void main(String[] args) {
+                  SpringApplication.run(GekkoApplication.class, args);
+              }
+          }
+          EOF
 
           # Sample controller
           cat > src/main/java/com/gekko/controller/OrderController.java <<'EOF'
-package com.gekko.controller;
+          package com.gekko.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+          import org.springframework.http.ResponseEntity;
+          import org.springframework.web.bind.annotation.GetMapping;
+          import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Sample controller (starter).
- */
-@RestController
-public class OrderController {
+          @RestController
+          public class OrderController {
 
-  @GetMapping("/api/v1/health")
-  public ResponseEntity<String> health() {
-    return ResponseEntity.ok("ok");
-  }
-}
-EOF
+              @GetMapping("/api/v1/health")
+              public ResponseEntity<String> health() {
+                  return ResponseEntity.ok("ok");
+              }
+          }
+          EOF
 
-          # Simple security stub (disable for starter)
+          # Security configuration
           cat > src/main/java/com/gekko/security/SecurityConfig.java <<'EOF'
-package com.gekko.security;
+          package com.gekko.security;
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+          import org.springframework.context.annotation.Configuration;
+          import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+          import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+          import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 
-/**
- * Security config: left permissive for the starter project.
- * Replace with JWT / OAuth2 in production.
- */
-@SuppressWarnings("deprecation")
-@Configuration
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
-    http.csrf().disable().authorizeRequests().anyRequest().permitAll();
-  }
-}
-EOF
+          @Configuration
+          @EnableWebSecurity
+          @SuppressWarnings("deprecation")
+          public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-          # Add a minimal CI workflow (runs mvn test)
+              @Override
+              protected void configure(HttpSecurity http) throws Exception {
+                  http
+                      .csrf().disable()
+                      .authorizeRequests()
+                      .anyRequest().permitAll();
+              }
+          }
+          EOF
+
+          # CI workflow
           cat > .github/workflows/ci.yml <<'EOF'
-name: CI
+          name: CI
 
-on:
-  push:
-    branches:
-      - main
-      - feature/** 
-  pull_request:
+          on:
+            push:
+              branches:
+                - main
+                - 'feature/**'
+            pull_request:
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-      - name: Build and test
-        run: mvn -B -DskipTests=false test
-EOF
+          jobs:
+            build:
+              runs-on: ubuntu-latest
 
-          # Stage and commit changes
+              steps:
+                - name: Checkout repository
+                  uses: actions/checkout@v4
+
+                - name: Set up JDK 11
+                  uses: actions/setup-java@v4
+                  with:
+                    java-version: '11'
+                    distribution: temurin
+                    cache: maven
+
+                - name: Build and test
+                  run: mvn -B test
+          EOF
+
+          # Stage and commit
           git add -A
-          if git diff --staged --quiet; then
+
+          if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Add Gekko starter project skeleton (README, pom, config, basic sources, migration, docker-compose, CI)"
+            git commit -m "Add Gekko starter project skeleton"
           fi
 
+          # Push branch
+          git push --set-upstream origin "$BRANCH"
+
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Add Gekko starter project skeleton"
           branch: feature/complete-project-3
           title: "Feature: add Gekko starter project skeleton"
           body: |
-            This PR adds a starter Spring Boot skeleton for the Gekko project:
-            - pom.xml, README.md
-            - application.yml, Flyway migration V1__init.sql
-            - docker-compose.yml (postgres, zookeeper, kafka)
-            - basic Java application and sample controller
-            - CI workflow (runs mvn test)
+            ## Gekko starter project
+
+            This PR adds the initial Spring Boot project skeleton.
+
+            ### Included
+
+            - pom.xml
+            - README.md
+            - application.yml
+            - Flyway V1 migration
+            - docker-compose.yml
+            - Spring Boot application
+            - Health endpoint
+            - Security configuration
+            - CI workflow
+
+            Further production implementation is still required.
+          base: main
