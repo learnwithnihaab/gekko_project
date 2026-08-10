@@ -56,7 +56,7 @@ How to use:
    mvn clean package
    java -jar target/gekko-service-0.0.1-SNAPSHOT.jar
 3. Endpoints:
-   - GET /actuator/health (if actuator enabled)
+   - GET /api/v1/health (sample)
    - See src/ for sample controllers.
 
 Notes:
@@ -64,7 +64,7 @@ Notes:
   add real PDAPI/BRIM clients, secure secrets and update JWT/OAuth config as needed.
 EOF
 
-          # pom.xml (minimal but includes required deps)
+          # pom.xml (minimal)
           cat > pom.xml <<'EOF'
 <project xmlns="http://maven.apache.org/POM/4.0.0" 
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
