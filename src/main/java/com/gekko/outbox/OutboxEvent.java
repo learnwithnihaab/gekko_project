@@ -5,7 +5,7 @@ import java.time.OffsetDateTime;
 
 /**
  * OutboxEvent - simple outbox table to store events that need to be published to Kafka.
- * This is part of an eventual outbox pattern ensuring DB + message durability.
+ * This class now includes a version field for optimistic locking in future improvements.
  */
 @Entity
 @Table(name = "outbox_events")
@@ -28,6 +28,9 @@ public class OutboxEvent {
     @Column(name = "created_at")
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
+    @Version
+    private Long version;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getAggregateType() { return aggregateType; }
@@ -42,4 +45,6 @@ public class OutboxEvent {
     public void setPublished(Boolean published) { this.published = published; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
 }

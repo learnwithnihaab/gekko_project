@@ -24,3 +24,12 @@ kafka:
 redis:
   host: ${REDIS_HOST:localhost}
   port: ${REDIS_PORT:6379}
+
+# Outbox config
+outbox:
+  poll:
+    delay: 5000
+  batch:
+    size: 50
+  retry:
+    count: 3
