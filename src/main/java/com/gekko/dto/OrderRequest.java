@@ -1,67 +1,30 @@
 package com.gekko.dto;
 
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Positive;
 import java.math.BigDecimal;
 
-/**
- * DTO for creating an order. This models the payload Storefront or Argon would POST to Gekko.
- */
 public class OrderRequest {
+    @NotBlank(message = "externalId is required")
+    private String externalId;
 
-    @NotNull
-    private String externalOrderId; // sales order number from store
+    @NotNull(message = "customerId is required")
+    private Long customerId;
 
-    @NotNull
-    private String customerExternalId; // customer id in frontend store / Argon
-
-    @NotNull
+    @NotBlank(message = "productCode is required")
     private String productCode;
 
-    @NotNull
+    @NotNull(message = "amount is required")
+    @Positive(message = "amount must be positive")
     private BigDecimal amount;
 
-    @NotNull
-    private String currency;
-
-    // getters/setters
-
-    public String getExternalOrderId() {
-        return externalOrderId;
-    }
-
-    public void setExternalOrderId(String externalOrderId) {
-        this.externalOrderId = externalOrderId;
-    }
-
-    public String getCustomerExternalId() {
-        return customerExternalId;
-    }
-
-    public void setCustomerExternalId(String customerExternalId) {
-        this.customerExternalId = customerExternalId;
-    }
-
-    public String getProductCode() {
-        return productCode;
-    }
-
-    public void setProductCode(String productCode) {
-        this.productCode = productCode;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
+    public String getExternalId() { return externalId; }
+    public void setExternalId(String externalId) { this.externalId = externalId; }
+    public Long getCustomerId() { return customerId; }
+    public void setCustomerId(Long customerId) { this.customerId = customerId; }
+    public String getProductCode() { return productCode; }
+    public void setProductCode(String productCode) { this.productCode = productCode; }
+    public BigDecimal getAmount() { return amount; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
 }
