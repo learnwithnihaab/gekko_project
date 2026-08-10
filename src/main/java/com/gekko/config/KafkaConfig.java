@@ -37,4 +37,9 @@ public class KafkaConfig {
     public NewTopic ordersTopic() {
         return new NewTopic("gekko.orders.created", 1, (short) 1);
     }
+
+    @Bean
+    public NewTopic subscriptionsTopic() {
+        return new NewTopic("gekko.subscriptions.created", 1, (short) 1);
+    }
 }
