@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gekko
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate.format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+  redis:
+    host: localhost
+    port: 6379
+
+app:
+  jwt:
+    secret: "ChangeMeToAProperSecret"
+    expiration-ms: 3600000
+
+logging:
+  level:
+    root: INFO
+    com.gekko: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
