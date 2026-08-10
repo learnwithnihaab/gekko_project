@@ -1,0 +1,84 @@
+openapi: 3.0.0
+info:
+  title: Gekko Subscription API (internal)
+  version: 1.0.0
+paths:
+  /api/v1/orders:
+    post:
+      summary: Create an order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+      responses:
+        '201':
+          description: Created
+  /internal/webhooks/brim:
+    post:
+      summary: Receive BRIM webhook notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orderExternalId:
+                  type: string
+                contractAccount:
+                  type: string
+                subscriptionExternalId:
+                  type: string
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+      responses:
+        '200':
+          description: OK
+  /internal/admin/failed-orders:
+    get:
+      summary: List failed orders for admin/support
+      responses:
+        '200':
+          description: OK
+  /internal/admin/outbox/pending:
+    get:
+      summary: List pending outbox events
+      responses:
+        '200':
+          description: OK
+  /internal/admin/outbox/{id}/retry:
+    post:
+      summary: Retry a specific outbox event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    OrderRequest:
+      type: object
+      properties:
+        externalId:
+          type: string
+        customerId:
+          type: integer
+        productCode:
+          type: string
+        amount:
+          type: number
