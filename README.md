@@ -55,21 +55,36 @@ Admin endpoints should be restricted to ROLE_ADMIN in production (I can add that
 
 ## things till now:
 Items that are partially implemented or are stubs (need production completion)
+
 PDAPI/QLS: the client is a resilient stub; you must provide the actual PDAPI base URL, request/response contract and authentication (API key / OAuth / mTLS) so I can finish mapping and parsing responses and integrate real email hooks.
+
 BRIM outbound (calling BRIM from Gekko when order is created): currently the system receives BRIM callbacks; the outbound synchronous call from OrderService to BRIM (if required) is not yet implemented.
+
 APIGEE onboarding flow: we have a Client entity and an API-key filter in Gekko, but a production deployment typically uses APIGEE to manage onboarding and authentication (APIGEE → Gekko JWT forwarding). If you want Gekko itself to manage client secrets, we should:
+
 Hash secrets when stored (bcrypt).
+
 Add admin UX to rotate/revoke keys.
+
 Add secure distribution (do not show secrets in plain text after creation).
+
 GTR / ETR / SAP SV flows: not implemented (these are external orchestration steps such as hold-for-20-min, ETR verification, SAP SV interactions). You have webhook processing for BRIM but no direct modeling of GTR/ETR flows.
+
 Mail-service: not integrated — PDAPI may send email in your environment; if you want Gekko to send mail, we need to add a MailService integration (SMTP or SES).
+
 Data-parser for Argon: not implemented.
+
 Order cancellation / auto-renew ON/OFF endpoints: not implemented (can be added; DB has subscription fields).
+
 Redis: present in dependencies and docker-compose but not yet used via CacheManager or @Cacheable annotations on read-heavy endpoints.
+
 Full admin UI (production-grade): only a minimal prototype exists.
+
 Observability: Prometheus/Micrometer added; tracing (OpenTelemetry) and detailed dashboards are not added yet.
 Idempotency/correlation across all external calls: basic safeguards present (external IDs, outbox), but production-grade idempotency keys and dedupe for all BRIM/PDAPI calls should be added.
+
 AWS Kinesis integration (you mentioned APIGEE → AWS API Gateway → AWS Kinesis): not implemented.
+
 Exact file locations for the primary pieces (so you can inspect quickly)
 Entities: src/main/java/com/gekko/entity/*.java
 Repositories: src/main/java/com/gekko/repository/*.java
@@ -85,6 +100,8 @@ Admin UI prototype: docs/admin-ui/index.html
 OpenAPI and diagrams: docs/openapi.yaml, docs/diagrams/*
 Flyway migrations: src/main/resources/db/migration/V1__.. to V4__..
 Tests: src/test/java/com/gekko/...
+
+
 How you can verify locally (exact commands)
 git checkout feature/complete-project-3
 docker compose up -d
