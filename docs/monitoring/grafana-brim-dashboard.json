@@ -1,0 +1,46 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "gekko-brim-overview",
+    "title": "Gekko BRIM Integration Overview",
+    "tags": [ "gekko", "brim" ],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "10s",
+    "panels": [
+      {
+        "type": "row",
+        "title": "BRIM Integration",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+      },
+      {
+        "type": "stat",
+        "title": "BRIM Calls Success",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+        "targets": [ { "expr": "brim_calls_success_total", "refId": "A" } ]
+      },
+      {
+        "type": "stat",
+        "title": "BRIM Calls Failure",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+        "targets": [ { "expr": "brim_calls_failure_total", "refId": "B" } ]
+      },
+      {
+        "type": "graph",
+        "title": "BRIM Latency (ms)",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+        "targets": [ { "expr": "histogram_quantile(0.95, sum(rate(brim_calls_latency_seconds_bucket[5m])) by (le))", "refId": "C" } ]
+      },
+      {
+        "type": "graph",
+        "title": "Outbox Published / Failed",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+        "targets": [
+          { "expr": "rate(outbox_published_count[5m])", "refId": "D" },
+          { "expr": "rate(outbox_failed_count[5m])", "refId": "E" }
+        ]
+      }
+    ]
+  }
+}

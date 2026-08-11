@@ -1,0 +1,19 @@
+groups:
+- name: Gekko Alert Rules
+  rules:
+  - alert: BrimCallFailureHigh
+    expr: increase(brim_calls_failure_total[10m]) > 5
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High BRIM call failure rate"
+      description: "BRIM call failures increased by more than 5 in the last 10 minutes."
+  - alert: OutboxFailureGrowing
+    expr: increase(outbox_failed_count[30m]) > 10
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Outbox failures increasing"
+      description: "Outbox failed count increased significantly in the last 30 minutes."
