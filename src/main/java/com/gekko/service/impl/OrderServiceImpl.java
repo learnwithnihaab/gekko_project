@@ -3,6 +3,7 @@ package com.gekko.service.impl;
 import com.gekko.dto.OrderRequest;
 import com.gekko.entity.Customer;
 import com.gekko.entity.OrderEntity;
+import com.gekko.integration.BrimIntegrationService;
 import com.gekko.outbox.OutboxEvent;
 import com.gekko.repository.CustomerRepository;
 import com.gekko.repository.OrderRepository;
@@ -19,7 +20,7 @@ import java.util.Optional;
  * - ensures customer exists (creates if missing)
  * - persists OrderEntity with status NEW
  * - writes an outbox event (to be published to Kafka)
- * This implementation keeps logic small and synchronous; in production move heavy-lifting to async workers.
+ * - triggers an asynchronous BRIM contract creation call via BrimIntegrationService
  */
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -27,11 +28,13 @@ public class OrderServiceImpl implements OrderService {
     private final CustomerRepository customerRepository;
     private final OrderRepository orderRepository;
     private final OutboxRepository outboxRepository;
+    private final BrimIntegrationService brimIntegrationService;
 
-    public OrderServiceImpl(CustomerRepository customerRepository, OrderRepository orderRepository, OutboxRepository outboxRepository) {
+    public OrderServiceImpl(CustomerRepository customerRepository, OrderRepository orderRepository, OutboxRepository outboxRepository, BrimIntegrationService brimIntegrationService) {
         this.customerRepository = customerRepository;
         this.orderRepository = orderRepository;
         this.outboxRepository = outboxRepository;
+        this.brimIntegrationService = brimIntegrationService;
     }
 
     @Override
@@ -66,6 +69,14 @@ public class OrderServiceImpl implements OrderService {
         String payload = String.format("{\"externalId\":\"%s\",\"orderId\":%d}", order.getExternalId(), order.getId());
         event.setPayload(payload);
         outboxRepository.save(event);
+
+        // Trigger asynchronous BRIM contract creation (resilient call with idempotency header)
+        try {
+            brimIntegrationService.triggerCreateContract(order);
+        } catch (Exception ex) {
+            // Don't fail the request if BRIM call scheduling fails; outbox + publisher still ensures eventual delivery via Kafka
+            // Log and continue
+        }
 
         return order;
     }
