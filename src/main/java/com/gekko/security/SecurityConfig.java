@@ -10,25 +10,24 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Security configuration using the modern SecurityFilterChain.
- *
- * This config enables JWT-based authentication for API endpoints. For development you can set
- * app.jwt.secret in application.yml (a shared HMAC secret). In production prefer using a
- * proper identity provider and JWK set URI (set spring.security.oauth2.resourceserver.jwt.jwk-set-uri).
- *
- * Endpoints permitted without authentication:
- * - GET /api/v1/health
- * - /actuator/** (optional, can be locked down in prod)
+ * Security configuration updated to register the ClientAuthFilter.
  */
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+
+    private final ClientAuthFilter clientAuthFilter;
+
+    public SecurityConfig(ClientAuthFilter clientAuthFilter) {
+        this.clientAuthFilter = clientAuthFilter;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -38,17 +37,14 @@ public class SecurityConfig {
                 .antMatchers("/api/v1/health", "/actuator/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(Customizer.withDefaults())
-            );
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+
+        // Ensure client API key filter runs before UsernamePasswordAuthenticationFilter so it can set an authenticated principal
+        http.addFilterBefore(clientAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    /**
-     * Configures a JwtDecoder that validates symmetric HMAC-signed JWTs using the app.jwt.secret.
-     * For production you should use an asymmetric JWK set URI and let Spring configure the decoder.
-     */
     @Bean
     public JwtDecoder jwtDecoder(@Value("${app.jwt.secret}") String secret) {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
