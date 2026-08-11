@@ -3,33 +3,29 @@ package com.gekko.integration;
 import com.gekko.entity.OrderEntity;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
-import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.reactor.retry.RetryOperator;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.Callable;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
 
 /**
- * BrimClient - resilient HTTP client to call BRIM for contract/subscription creation.
- *
- * Behavior:
- * - Sends a POST to {brim.base-url}/contracts with an idempotency header derived from the order externalId.
- * - Uses Resilience4j CircuitBreaker and Retry for basic resilience.
- * - This implementation blocks (WebClient.block()) under the decorated Callable and is intended to be
- *   executed asynchronously from the caller (e.g., via @Async). This keeps the API request fast and
- *   hands the BRIM interaction to a background thread.
- *
- * Notes and production improvements:
- * - Use asynchronous reactive flows instead of blocking when integrating into a reactive pipeline.
- * - Use a per-order idempotency key (externalId) so retries are safe on BRIM side.
- * - Configure CircuitBreaker and Retry parameters via properties for production tuning.
+ * Reactive BrimClient - non-blocking WebClient integration with BRIM.
+ * - Returns a Mono<String> with the BRIM response body.
+ * - Applies Reactor retry/backoff and Resilience4j circuit-breaker operator.
+ * - Emits Micrometer metrics for success/failure and call time.
  */
 @Component
 public class BrimClient {
@@ -38,13 +34,26 @@ public class BrimClient {
 
     private final WebClient webClient;
     private final CircuitBreaker circuitBreaker;
-    private final Retry retry;
+    private final int retryAttempts;
+    private final int retryWaitSeconds;
+    private final int timeoutSeconds;
+
+    private final Counter successCounter;
+    private final Counter failureCounter;
+    private final Timer timer;
 
     public BrimClient(WebClient.Builder builder,
-                      @Value("${brim.base-url:http://brim.local}") String baseUrl,
-                      @Value("${brim.circuit.failureRateThreshold:50}") int failureRateThreshold,
-                      @Value("${brim.circuit.waitDurationInOpenMs:60000}") long waitDurationInOpenMs) {
+                      @Value("${brim.base-url}") String baseUrl,
+                      @Value("${brim.circuit.failure-rate-threshold}") int failureRateThreshold,
+                      @Value("${brim.circuit.wait-duration-in-open-ms}") long waitDurationInOpenMs,
+                      @Value("${brim.retry.attempts}") int retryAttempts,
+                      @Value("${brim.retry.wait-seconds}") int retryWaitSeconds,
+                      @Value("${brim.timeout-seconds}") int timeoutSeconds,
+                      MeterRegistry meterRegistry) {
         this.webClient = builder.baseUrl(baseUrl).build();
+        this.retryAttempts = retryAttempts;
+        this.retryWaitSeconds = retryWaitSeconds;
+        this.timeoutSeconds = timeoutSeconds;
 
         CircuitBreakerConfig cbConfig = CircuitBreakerConfig.custom()
                 .failureRateThreshold(failureRateThreshold)
@@ -52,52 +61,28 @@ public class BrimClient {
                 .build();
         this.circuitBreaker = CircuitBreaker.of("brim", cbConfig);
 
-        RetryConfig retryConfig = RetryConfig.custom()
-                .maxAttempts(3)
-                .waitDuration(Duration.ofSeconds(2))
-                .build();
-        this.retry = Retry.of("brim", retryConfig);
+        this.successCounter = meterRegistry.counter("brim.calls.success");
+        this.failureCounter = meterRegistry.counter("brim.calls.failure");
+        this.timer = meterRegistry.timer("brim.calls.latency");
     }
 
-    /**
-     * Create contract in BRIM for the given order. Returns the BRIM response body as string.
-     * This method uses the order.externalId as idempotency key if present, otherwise generates a UUID.
-     */
-    public String createContract(OrderEntity order) throws Exception {
+    public Mono<String> createContract(OrderEntity order) {
         String idempotencyKey = order.getExternalId() != null ? "order-" + order.getExternalId() : UUID.randomUUID().toString();
 
         String payload = String.format("{\"externalId\":\"%s\",\"orderId\":%d,\"product\":\"%s\",\"amount\":%s}",
                 order.getExternalId(), order.getId(), order.getProductCode(), order.getAmount() == null ? "0" : order.getAmount().toString());
 
-        Callable<String> call = () -> {
-            log.info("Calling BRIM create contract for order={} idempotency={}", order.getExternalId(), idempotencyKey);
-            try {
-                // Execute HTTP request and block until result (caller should call this async)
-                String resp = webClient.post()
-                        .uri(uriBuilder -> uriBuilder.path("/contracts").build())
-                        .header("Idempotency-Key", idempotencyKey)
-                        .header("Content-Type", "application/json")
-                        .bodyValue(payload)
-                        .retrieve()
-                        .bodyToMono(String.class)
-                        .block(Duration.ofSeconds(15));
+        Mono<String> call = webClient.post()
+                .uri(uriBuilder -> uriBuilder.path("/contracts").build())
+                .header("Idempotency-Key", idempotencyKey)
+                .header("Content-Type", "application/json")
+                .bodyValue(payload)
+                .retrieve()
+                .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(timeoutSeconds))
+                .transformDeferred(CircuitBreakerOperator.of(circuitBreaker))
+                .retryWhen(Retry.backoff(retryAttempts, Duration.ofSeconds(retryWaitSeconds)).maxBackoff(Duration.ofSeconds(retryWaitSeconds * 4)));
 
-                log.info("BRIM responded for order {}: {}", order.getExternalId(), resp);
-                return resp;
-            } catch (Exception ex) {
-                log.error("BRIM call failed for order {}", order.getExternalId(), ex);
-                throw ex;
-            }
-        };
-
-        // Decorate the call with retry and circuit breaker
-        Callable<String> decorated = CircuitBreaker.decorateCallable(circuitBreaker, Retry.decorateCallable(retry, call));
-
-        try {
-            return decorated.call();
-        } catch (Exception ex) {
-            // Bubble up so caller can handle (and metrics / outbox retry will take care of eventual consistency)
-            throw ex;
-        }
+        return timer.recordWhen(call.doOnSuccess(r -> successCounter.increment()).doOnError(e -> failureCounter.increment()));
     }
 }

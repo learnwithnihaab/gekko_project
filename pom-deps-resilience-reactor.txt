@@ -1,0 +1,6 @@
+    <!-- Resilience4j Reactor adapter -->
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-reactor</artifactId>
+      <version>${resilience4j.version}</version>
+    </dependency>

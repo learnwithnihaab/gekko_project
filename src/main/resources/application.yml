@@ -20,6 +20,17 @@ app:
 kafka:
   bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
 
+# brim config (external BRIM integration)
+brim:
+  base-url: ${BRIM_BASE_URL:http://localhost:8085}
+  timeout-seconds: ${BRIM_TIMEOUT_SECONDS:15}
+  retry:
+    attempts: ${BRIM_RETRY_ATTEMPTS:3}
+    wait-seconds: ${BRIM_RETRY_WAIT_SECONDS:2}
+  circuit:
+    failure-rate-threshold: ${BRIM_CIRCUIT_FAILURE_RATE:50}
+    wait-duration-in-open-ms: ${BRIM_CIRCUIT_WAIT_MS:60000}
+
 # redis (if used)
 redis:
   host: ${REDIS_HOST:localhost}
