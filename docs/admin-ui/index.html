@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Gekko Admin UI (Prototype)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h1>Gekko Admin (Prototype)</h1>
+  <div>
+    <label>Bearer Token: <input id="token" style="width:400px"></label>
+    <button onclick="loadPending()">Load Pending Outbox (first 100)</button>
+  </div>
+  <div id="outbox"></div>
+
+  <script>
+    async function loadPending() {
+      const token = document.getElementById('token').value;
+      const res = await fetch('/internal/admin/outbox/pending', { headers: { 'Authorization': 'Bearer ' + token } });
+      const data = await res.json();
+      renderOutbox(data);
+    }
+
+    function renderOutbox(items) {
+      if (!items || items.length === 0) { document.getElementById('outbox').innerHTML = '<p>No pending events</p>'; return; }
+      let html = '<table><tr><th>ID</th><th>Type</th><th>Aggregate</th><th>Payload</th><th>Action</th></tr>';
+      items.forEach(it => {
+        html += `<tr><td>${it.id}</td><td>${it.type}</td><td>${it.aggregateType} / ${it.aggregateId}</td><td><pre>${escapeHtml(it.payload)}</pre></td><td><button onclick="retry(${it.id})">Retry</button></td></tr>`;
+      });
+      html += '</table>';
+      document.getElementById('outbox').innerHTML = html;
+    }
+
+    async function retry(id) {
+      const token = document.getElementById('token').value;
+      await fetch('/internal/admin/outbox/' + id + '/retry', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      loadPending();
+    }
+
+    function escapeHtml(unsafe) {
+      return unsafe
+           .replace(/&/g, "&amp;")
+           .replace(/</g, "&lt;")
+           .replace(/>/g, "&gt;")
+           .replace(/\"/g, "&quot;")
+           .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

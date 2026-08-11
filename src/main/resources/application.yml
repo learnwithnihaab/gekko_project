@@ -1,16 +1,46 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/gekko
-    username: postgres
-    password: password
-
+    url: ${JDBC_URL:jdbc:postgresql://localhost:5432/gekko}
+    username: ${JDBC_USER:postgres}
+    password: ${JDBC_PASSWORD:password}
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: true
-
   flyway:
     enabled: true
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:ChangeMe}
+
+kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+
+# brim config (external BRIM integration)
+brim:
+  base-url: ${BRIM_BASE_URL:http://localhost:8085}
+  timeout-seconds: ${BRIM_TIMEOUT_SECONDS:15}
+  retry:
+    attempts: ${BRIM_RETRY_ATTEMPTS:3}
+    wait-seconds: ${BRIM_RETRY_WAIT_SECONDS:2}
+  circuit:
+    failure-rate-threshold: ${BRIM_CIRCUIT_FAILURE_RATE:50}
+    wait-duration-in-open-ms: ${BRIM_CIRCUIT_WAIT_MS:60000}
+
+# redis (if used)
+redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+
+# Outbox config
+outbox:
+  poll:
+    delay: 5000
+  batch:
+    size: 50
+  retry:
+    count: 3
