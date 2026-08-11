@@ -103,6 +103,7 @@ Tests: src/test/java/com/gekko/...
 
 
 How you can verify locally (exact commands)
+
 git checkout feature/complete-project-3
 docker compose up -d
 mvn test
